@@ -376,42 +376,13 @@
 
 ## Next Steps
 
-1. Implement Dashboard Features:
-   - Create dashboard app endpoints:
-     - `/api/dashboard/last_study_session`
-     - `/api/dashboard/study_progress`
-     - `/api/dashboard/quick-stats`
-   - Implement success rate calculations
-   - Add study streak tracking
-   - Calculate total words studied vs. available
-
-2. Add System Reset Functionality:
+1. Add System Reset Functionality:
    - Implement `/api/reset_history` endpoint
      - Clear study sessions and word reviews
      - Preserve words and groups data
    - Implement `/api/full_reset` endpoint
      - Complete system reset
      - Reload initial fixture data
-
-3. Enhance Testing:
-   - Add tests for study app:
-     - Test study activity model validations
-     - Test session creation and word reviews
-     - Test serializer edge cases
-   - Add tests for dashboard features
-   - Improve coverage for uncovered lines
-
-4. Documentation and Code Quality:
-   - Add API documentation for study activities
-   - Document success/error response formats
-   - Add input validation error messages
-   - Review and standardize HTTP status codes
-
-5. Frontend Integration Support:
-   - Test all endpoints with frontend requirements
-   - Verify timestamp formats
-   - Ensure pagination works with frontend components
-   - Add CORS headers for frontend development
 
 ## Technical Notes
 
@@ -453,6 +424,18 @@
 
    # Run specific test method
    python -m pytest apps/words/tests/test_models.py::TestWordModel::test_word_creation
+
+   # Run tests for a specific app
+   python -m pytest apps/dashboard/tests/test_views.py
+
+   # Run specific test class in an app
+   python -m pytest apps/dashboard/tests/test_views.py::TestQuickStatsView
+
+   # Run with coverage for specific app
+   python -m pytest apps/dashboard/tests/test_views.py --cov=apps.dashboard
+
+   # Run with coverage and show missing lines
+   python -m pytest --cov=apps --cov-report=term-missing
    ```
 
 3. Test Coverage (as of 2025-02-15):
@@ -579,8 +562,89 @@
      - Improved error case handling
      - Added comprehensive model validation tests
 
-## Study Activities Implementation
+10. DateTime Handling in Tests:
 
+    a. Issue Description:
+    There were two main problems with datetime handling in tests:
+
+    1. **Date Creation Issue:**
+    When creating test sessions with explicit dates, setting `created_at` directly didn't work:
+    ```python
+    # Original problematic code
+    session = StudySession.objects.create(
+        group=group,
+        study_activity=activity,
+        created_at=session_date  # This doesn't work as expected
+    )
+    ```
+
+    This failed because Django's `auto_now_add=True` on the `created_at` field would override any value we tried to set. Example of the issue:
+    ```python
+    # What we wanted:
+    Session 1: created_at = 2025-02-15 12:00:00+00:00  # Today
+    Session 2: created_at = 2025-02-14 12:00:00+00:00  # Yesterday
+    Session 3: created_at = 2025-02-13 12:00:00+00:00  # 2 days ago
+
+    # What we actually got:
+    Session 1: created_at = 2025-02-15 12:00:00+00:00  # All sessions
+    Session 2: created_at = 2025-02-15 12:00:00+00:00  # got the same
+    Session 3: created_at = 2025-02-15 12:00:00+00:00  # creation date
+    ```
+
+    2. **Timezone Handling:**
+    The code was mixing timezone-aware and naive datetime objects:
+    ```python
+    base_date = datetime(2025, 2, 15, 12, 0, tzinfo=dt_timezone.utc)  # Explicit timezone
+    session_date = base_date - timedelta(days=1)  # This preserves timezone
+    today = timezone.now().date()  # This uses system timezone
+    ```
+
+    b. The Fix:
+    1. **Using `freeze_time` for Date Creation:**
+    Instead of setting `created_at` directly, we use `freeze_time` to set the system time when creating each session:
+    ```python
+    # Fixed code
+    base_date = timezone.now()  # 2025-02-15 12:00:00+00:00
+
+    # Create sessions with explicit dates
+    session_dates = [
+        base_date,                          # 2025-02-15 12:00:00+00:00
+        base_date - timedelta(days=1),      # 2025-02-14 12:00:00+00:00
+        base_date - timedelta(days=2)       # 2025-02-13 12:00:00+00:00
+    ]
+
+    for session_date in session_dates:
+        with freeze_time(session_date):
+            session = StudySession.objects.create(
+                group=group,
+                study_activity=activity
+            )
+    ```
+
+    This ensures correct creation dates:
+    ```python
+    # What we now get (correct dates):
+    Session 1: created_at = 2025-02-15 12:00:00+00:00  # Today
+    Session 2: created_at = 2025-02-14 12:00:00+00:00  # Yesterday
+    Session 3: created_at = 2025-02-13 12:00:00+00:00  # 2 days ago
+    ```
+
+    2. **Consistent Timezone Usage:**
+    We now use Django's `timezone.now()` consistently:
+    ```python
+    base_date = timezone.now()  # Always timezone-aware
+    today = timezone.now().date()  # Date-only but from same timezone
+    ```
+
+    c. Benefits of the Fix:
+    1. Each session gets the correct creation date
+    2. Streak calculation works correctly by properly detecting consecutive days
+    3. All datetime comparisons use timezone-aware objects
+    4. Tests are deterministic and repeatable with fixed time points
+
+    The result is accurate streak calculation that correctly identifies 3 consecutive days of study when sessions are created on 2025-02-13, 2025-02-14, and 2025-02-15.
+
+## Study Activities Implementation
 
 1. Models:
    - StudyActivity: Represents different types of study activities
@@ -602,3 +666,221 @@
    [13:51:31] "POST /api/study_sessions/3/words/9/review/" 200 107
    ```
    All endpoints working as expected with proper response codes and data.
+
+## Dashboard Implementation
+
+1. Architecture Decisions:
+   - Using `APIView` instead of `ViewSet` for dashboard endpoints
+     - Simpler implementation for statistic-focused endpoints
+     - No need for full REST operations (list/retrieve/create/update/delete)
+     - More focused, single-purpose endpoints
+     - Trade-off: Endpoints don't show up in API root listing
+
+2. Django REST Framework View Types (Source: https://www.django-rest-framework.org/api-guide/views/):
+
+   a. APIView
+      - Base class for all DRF views
+      - Direct mapping to HTTP methods (get, post, put, delete)
+      - Use cases:
+        - Custom endpoints with specific business logic
+        - Statistical endpoints (like our dashboard)
+        - Non-CRUD operations
+        - Complex data aggregation
+      Example from our dashboard:
+      ```python
+      class QuickStatsView(APIView):
+          def get(self, request):
+              # Custom logic for calculating statistics
+              return Response(stats_data)
+      ```
+
+   b. ViewSet
+      - Combines common operations into a single class
+      - Automatically handles URL routing
+      - Built-in support for DRF's Router class
+      - Use cases:
+        - CRUD operations on models
+        - Standard REST APIs
+        - Resource-based views
+      Example from our words app:
+      ```python
+      class WordViewSet(viewsets.ReadOnlyModelViewSet):
+          queryset = Word.objects.all()
+          serializer_class = WordSerializer
+      ```
+
+   c. GenericAPIView
+      - Adds common REST functionality to APIView
+      - Includes pagination, filtering, and sorting
+      - Use cases:
+        - When you need some but not all ViewSet features
+        - Custom list/detail views with standard behaviors
+      Example:
+      ```python
+      class WordListView(generics.ListAPIView):
+          queryset = Word.objects.all()
+          serializer_class = WordSerializer
+          pagination_class = CustomPagination
+      ```
+
+   d. Generic ViewSets (Source: https://www.django-rest-framework.org/api-guide/viewsets/):
+      - ModelViewSet: Full CRUD operations
+      - ReadOnlyModelViewSet: List and retrieve only
+      - Use cases:
+        - Standard database operations
+        - When you need automatic URL routing
+      Example:
+      ```python
+      class GroupViewSet(viewsets.ReadOnlyModelViewSet):
+          queryset = Group.objects.all()
+          serializer_class = GroupSerializer
+      ```
+
+3. Choosing Between View Types:
+
+   a. Use APIView when:
+      - You need complete control over behavior
+      - Implementing custom endpoints
+      - Building non-CRUD functionality
+      - Handling complex business logic
+
+   b. Use ViewSet when:
+      - Working with standard CRUD operations
+      - Need automatic URL routing
+      - Want to minimize boilerplate code
+      - Building resource-oriented APIs
+
+   c. Use GenericAPIView when:
+      - You need specific generic views
+      - Want pagination/filtering without ViewSet
+      - Building custom list/detail views
+
+   d. Use Generic ViewSets when:
+      - Need quick CRUD implementation
+      - Working directly with models
+      - Want maximum automation
+
+4. Current Implementation Examples:
+
+   a. Dashboard (APIView):
+   ```python
+   # Custom statistical endpoint
+   class QuickStatsView(APIView):
+       def get(self, request):
+           return Response({
+               "success_rate": 83.3,
+               "total_study_sessions": 3,
+               "total_active_groups": 2,
+               "study_streak_days": 3
+           })
+   ```
+
+   b. Words (ViewSet):
+   ```python
+   # Standard CRUD operations
+   class WordViewSet(viewsets.ReadOnlyModelViewSet):
+       queryset = Word.objects.all()
+       serializer_class = WordSerializer
+   ```
+
+5. URL Patterns:
+
+   a. APIView URLs (explicit):
+   ```python
+   urlpatterns = [
+       path('quick-stats/', QuickStatsView.as_view()),
+   ]
+   ```
+
+   b. ViewSet URLs (router-based):
+   ```python
+   router = DefaultRouter()
+   router.register(r'words', WordViewSet)
+   urlpatterns = router.urls
+   ```
+
+6. Endpoints Implementation:
+   ```python
+   # Using APIView for focused, statistic-based endpoints
+   class QuickStatsView(APIView):
+       def get(self, request):
+           # Returns: success_rate, total_study_sessions, 
+           # total_active_groups, study_streak_days
+   
+   class StudyProgressView(APIView):
+       def get(self, request):
+           # Returns: total_words_studied, total_available_words
+   
+   class LastStudySessionView(APIView):
+       def get(self, request):
+           # Returns: session details including activity_name, 
+           # group_name, timing, and review count
+   ```
+
+7. URL Structure:
+   ```python
+   # Direct URL patterns instead of router registration
+   urlpatterns = [
+       path('last-study-session/', LastStudySessionView.as_view()),
+       path('study-progress/', StudyProgressView.as_view()),
+       path('quick-stats/', QuickStatsView.as_view()),
+   ]
+   ```
+
+8. API Endpoints:
+   - GET `/api/dashboard/quick-stats/`
+     ```json
+     {
+         "success_rate": 83.3,
+         "total_study_sessions": 3,
+         "total_active_groups": 2,
+         "study_streak_days": 3
+     }
+     ```
+   - GET `/api/dashboard/study-progress/`
+     ```json
+     {
+         "total_words_studied": 4,
+         "total_available_words": 11
+     }
+     ```
+   - GET `/api/dashboard/last-study-session/`
+     ```json
+     {
+         "id": 1,
+         "activity_name": "Typing Exercise",
+         "group_name": "Basic Greetings",
+         "created_at": "2025-02-15T14:00:00Z",
+         "end_time": "2025-02-15T14:10:00Z",
+         "review_items_count": 2
+     }
+     ```
+
+9. Note on API Root:
+   - Dashboard endpoints don't appear in `/api/` root listing
+   - This is because they use `APIView` instead of `ViewSet`
+   - API root only shows router-registered endpoints:
+     ```json
+     {
+         "words": "http://127.0.0.1:8000/api/words/",
+         "groups": "http://127.0.0.1:8000/api/groups/",
+         "study_activities": "http://127.0.0.1:8000/api/study_activities/",
+         "study_sessions": "http://127.0.0.1:8000/api/study_sessions/"
+     }
+     ```
+
+10. Testing:
+    - Manual testing with curl:
+      ```bash
+      # Test quick stats
+      curl -H "Accept: application/json" http://127.0.0.1:8000/api/dashboard/quick-stats/
+      
+      # Test study progress
+      curl -H "Accept: application/json" http://127.0.0.1:8000/api/dashboard/study-progress/
+      
+      # Test last study session
+      curl -H "Accept: application/json" http://127.0.0.1:8000/api/dashboard/last-study-session/
+      ```
+    - Test data provided in fixtures/dashboard_test_data.json
+    - All endpoints return proper JSON responses
+    - Statistics calculated correctly based on test data

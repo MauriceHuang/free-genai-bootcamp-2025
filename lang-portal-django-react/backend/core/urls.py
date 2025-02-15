@@ -17,12 +17,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
+from words.urls import router as words_router
+from study.urls import router as study_router
 
 # Create a router and register our viewsets with it
 router = routers.DefaultRouter()
 
+# Register all routes from app routers
+router.registry.extend(words_router.registry)
+router.registry.extend(study_router.registry)
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('words.urls')),
-    path('api/', include('study.urls')),
+    path('api/', include(router.urls)),
+    path('api/dashboard/', include('dashboard.urls')),
 ]

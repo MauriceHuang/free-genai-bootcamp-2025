@@ -51,6 +51,14 @@ class TestStudyActivityViewSet:
         assert response.data['items'][0]['group_name'] == "Test Group"
 
     def test_activity_sessions_no_pagination(self, api_client, activity, monkeypatch):
+        """
+        Test the non-paginated response for study sessions.
+        
+        monkeypatch is needed specifically in this test because we want to verify the API's
+        behavior when pagination is disabled. The view normally uses pagination by default,
+        so we use monkeypatch to temporarily override the pagination behavior just for this test,
+        while leaving it enabled for all other tests.
+        """
         """Test the non-paginated response for study sessions"""
         group = Group.objects.create(name="Test Group")
         session = StudySession.objects.create(
