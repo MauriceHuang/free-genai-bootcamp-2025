@@ -884,3 +884,35 @@
     - Test data provided in fixtures/dashboard_test_data.json
     - All endpoints return proper JSON responses
     - Statistics calculated correctly based on test data
+
+11. Testing Resets:
+    - Reload fixture data:
+      ```sh
+      python manage.py loaddata fixtures/initial_data.json fixtures/study_activities.json fixtures/additional_data.json
+      ```
+
+    - Verify data was loaded:
+      ```sh
+      python manage.py shell -c "from words.models import Word, Group; from study.models import StudyActivity, StudySession, WordReviewItem; print(f'Words: {Word.objects.count()}\nGroups: {Group.objects.count()}\nStudy Activities: {StudyActivity.objects.count()}\nStudy Sessions: {StudySession.objects.count()}\nWord Reviews: {WordReviewItem.objects.count()}')"
+      ```
+
+    - Expected output:
+      ```sh
+      Words: 12
+      Groups: 3 
+      Study Activities: 2
+      Study Sessions: 3
+      Word Reviews: 6
+      ```
+
+    - Data loaded successfully:
+      - 12 words (11 from initial_data.json + 1 from additional_data.json)
+      - 3 groups (from initial_data.json)
+      - 2 study activities
+      - 3 study sessions 
+      - 6 word reviews
+
+    - Reset endpoint behavior:
+      - `/api/reset-history/`: Preserves words and groups, no reload needed
+      - `/api/full-reset/`: Automatically reloads initial_data.json
+        - For complete dataset, run loaddata command shown above
