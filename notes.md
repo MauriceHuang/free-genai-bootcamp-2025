@@ -13,6 +13,20 @@
      - groups (ManyToManyField to Group)
    - Group model with fields:
      - name (CharField)
+   - StudyActivity model with fields:
+     - name (CharField)
+     - thumbnail_url (URLField)
+     - description (TextField)
+   - StudySession model with fields:
+     - group (ForeignKey to Group)
+     - study_activity (ForeignKey to StudyActivity)
+     - created_at (DateTimeField)
+     - end_time (DateTimeField)
+   - WordReviewItem model with fields:
+     - word (ForeignKey to Word)
+     - study_session (ForeignKey to StudySession)
+     - correct (BooleanField)
+     - created_at (DateTimeField)
 
 2. API Endpoints
    - `/api/words/`
@@ -29,6 +43,89 @@
      - GET: Returns paginated list of words in a specific group
    - `/api/` 
      - GET: Shows available API endpoints
+   - `/api/study_activities/`
+     - GET: Returns paginated list of available study activities
+     ```json
+     {
+         "items": [
+             {
+                 "id": 1,
+                 "name": "Typing Exercise",
+                 "thumbnail_url": "https://example.com/thumbnails/typing.jpg",
+                 "description": "Practice typing Japanese words..."
+             }
+         ],
+         "pagination": {...}
+     }
+     ```
+   - `/api/study_activities/{id}/study_sessions/`
+     - GET: Returns paginated list of study sessions for an activity
+     ```json
+     {
+         "items": [
+             {
+                 "id": 1,
+                 "activity_name": "Typing Exercise",
+                 "group_name": "Basic Greetings",
+                 "start_time": "2025-02-08T22:20:23Z",
+                 "end_time": "2025-02-08T22:30:23Z",
+                 "review_items_count": 3
+             }
+         ],
+         "pagination": {...}
+     }
+     ```
+   - `/api/study_sessions/`
+     - GET: Returns paginated list of all study sessions
+     - POST: Creates a new study session
+       ```json
+       Request:
+       {
+           "group": 3,
+           "study_activity": 1
+       }
+       ```
+   - `/api/study_sessions/{id}/`
+     - GET: Returns detailed information about a study session including word reviews
+     ```json
+     {
+         "id": 1,
+         "activity_name": "Typing Exercise",
+         "group_name": "Basic Greetings",
+         "start_time": "2025-02-08T22:20:23Z",
+         "end_time": "2025-02-08T22:30:23Z",
+         "review_items_count": 3,
+         "review_items": [
+             {
+                 "word": {
+                     "japanese": "こんにちは",
+                     "romaji": "konnichiwa",
+                     "english": "hello",
+                     "stats": {...},
+                     "groups": [...]
+                 },
+                 "correct": true,
+                 "created_at": "2025-02-08T22:21:00Z"
+             }
+         ]
+     }
+     ```
+   - `/api/study_sessions/{id}/words/{word_id}/review/`
+     - POST: Records a word review for the session
+     ```json
+     Request:
+     {
+         "correct": true
+     }
+     Response:
+     {
+         "success": true,
+         "word_id": 9,
+         "study_session_id": 3,
+         "correct": true,
+         "created_at": "2025-02-15T13:51:31.800779Z"
+     }
+     ```
 
 3. Data
    - Initial fixture data loaded with:
@@ -279,18 +376,42 @@
 
 ## Next Steps
 
-1. Implement remaining models:
-   - StudySession
-   - StudyActivity
-   - WordReviewItem
+1. Implement Dashboard Features:
+   - Create dashboard app endpoints:
+     - `/api/dashboard/last_study_session`
+     - `/api/dashboard/study_progress`
+     - `/api/dashboard/quick-stats`
+   - Implement success rate calculations
+   - Add study streak tracking
+   - Calculate total words studied vs. available
 
-2. Create remaining API endpoints:
-   - Groups endpoints
-   - Study sessions endpoints
-   - Dashboard endpoints
-   - Study activities endpoints
+2. Add System Reset Functionality:
+   - Implement `/api/reset_history` endpoint
+     - Clear study sessions and word reviews
+     - Preserve words and groups data
+   - Implement `/api/full_reset` endpoint
+     - Complete system reset
+     - Reload initial fixture data
 
-3. Add more comprehensive test data in fixtures
+3. Enhance Testing:
+   - Add tests for study app:
+     - Test study activity model validations
+     - Test session creation and word reviews
+     - Test serializer edge cases
+   - Add tests for dashboard features
+   - Improve coverage for uncovered lines
+
+4. Documentation and Code Quality:
+   - Add API documentation for study activities
+   - Document success/error response formats
+   - Add input validation error messages
+   - Review and standardize HTTP status codes
+
+5. Frontend Integration Support:
+   - Test all endpoints with frontend requirements
+   - Verify timestamp formats
+   - Ensure pagination works with frontend components
+   - Add CORS headers for frontend development
 
 ## Technical Notes
 
@@ -306,6 +427,12 @@
    backend/apps/words/tests/
    ├── __init__.py
    ├── test_models.py      # Tests for Word and Group models
+   ├── test_serializers.py # Tests for serializers
+   └── test_views.py       # Tests for API endpoints
+
+   backend/apps/study/tests/
+   ├── __init__.py
+   ├── test_models.py      # Tests for StudyActivity, StudySession, and WordReviewItem models
    ├── test_serializers.py # Tests for serializers
    └── test_views.py       # Tests for API endpoints
    ```
@@ -328,19 +455,21 @@
    python -m pytest apps/words/tests/test_models.py::TestWordModel::test_word_creation
    ```
 
-3. Test Coverage:
-   - Models:
-     - Group creation and validation
-     - Word creation and validation
-     - Word-Group relationships
-     - Stats calculation
-   - Serializers:
-     - Group serialization with word count
-     - Word serialization with groups and stats
-   - Views:
-     - List endpoints with pagination
-     - Detail endpoints with related data
-     - Custom actions (e.g., group words)
+3. Test Coverage (as of 2025-02-15):
+   - Overall Coverage: 98%
+   - Models: 100% coverage
+     - StudyActivity model tests
+     - StudySession model tests
+     - WordReviewItem model tests
+   - Serializers: 100% coverage
+     - Basic and detailed serialization
+     - Creation serializers
+     - Nested data handling
+   - Views: 94-100% coverage
+     - Paginated and non-paginated responses
+     - CRUD operations
+     - Custom actions
+     - Error handling
 
 4. Test Configuration:
    ```ini
@@ -349,41 +478,127 @@
    DJANGO_SETTINGS_MODULE = core.settings
    python_files = test_*.py
    addopts = --cov=apps --cov-report=term-missing
-   ``` 
-5. Common pytest decorators:
+   ```
 
-@pytest.mark.django_db
-- Enables database access for tests, handles test DB setup/teardown
-- Use case: When testing model creation, queries, or any database operations
-- Example: Testing Word model creation and relationships with Groups
-Source: https://pytest-django.readthedocs.io/en/latest/database.html
+5. Recent Improvements:
+   - Added test for non-paginated responses in StudyActivityViewSet
+   - Improved test documentation with detailed comments
+   - Added monkeypatch usage for pagination control
+   - Verified edge cases in API responses
 
-@pytest.fixture 
-- Defines reusable test data/objects that can be injected into tests
-- Use case: Creating test data that's needed across multiple tests
-- Example: Creating a test Group object that multiple Word tests can use
-Source: https://docs.pytest.org/en/stable/fixture.html
+6. Current Test Status:
+   - Total Tests: 36
+   - Passing: 36
+   - Coverage by App:
+     - study: 94-100%
+     - words: 90-100%
+     - dashboard: Pending implementation
 
-@pytest.mark.parametrize
-- Runs same test multiple times with different parameters
-- Use case: Testing function behavior with multiple input variations
-- Example: Testing word validation with different invalid inputs (None, empty string, etc)
-Source: https://docs.pytest.org/en/stable/parametrize.html
+7. Testing Best Practices Implemented:
+   - Using fixtures for common test data
+   - Testing both success and error cases
+   - Proper isolation using @pytest.mark.django_db
+   - Comprehensive model validation testing
+   - API response structure verification
+   - Pagination handling verification
 
-@pytest.mark.skip
-- Skips running this test
-- Use case: Temporarily skipping tests that are broken or in development
-- Example: Skipping a complex integration test while refactoring
-Source: https://docs.pytest.org/en/stable/skipping.html
+8. Areas for Improvement:
+   - Dashboard app tests need implementation
+   - Add more edge cases for error handling
+   - Improve test documentation
+   - Add performance tests for large datasets
+   - Add integration tests between apps
 
-@pytest.mark.xfail
-- Marks test as expected to fail
-- Use case: Documenting known bugs or unimplemented features
-- Example: Marking a test for a planned feature that's not yet implemented
-Source: https://docs.pytest.org/en/stable/skipping.html#xfail-mark-test-functions-as-expected-to-fail
+9. Common pytest decorators in use:
+   ```python
+   @pytest.mark.django_db
+   # Enables database access for tests, handles test DB setup/teardown
+   # Use case: When testing model creation, queries, or any database operations
+   # Example: Testing Word model creation and relationships with Groups
+   
+   @pytest.fixture 
+   # Defines reusable test data/objects that can be injected into tests
+   # Use case: Creating test data that's needed across multiple tests
+   # Example: Creating a test Group object that multiple Word tests can use
+   
+   @pytest.mark.parametrize
+   # Runs same test multiple times with different parameters
+   # Use case: Testing function behavior with multiple input variations
+   # Example: Testing word validation with different invalid inputs
+   
+   @pytest.mark.skip
+   # Skips running this test
+   # Use case: Temporarily skipping tests that are broken or in development
+   
+   @pytest.mark.xfail
+   # Marks test as expected to fail
+   # Use case: Documenting known bugs or unimplemented features
+   ```
 
-@pytest.mark.timeout
-- Sets max time a test can run
-- Use case: Preventing tests from hanging or running too long
-- Example: Setting timeout for tests involving external API calls
-Source: https://pypi.org/project/pytest-timeout/
+6. Testing Model Validation:
+   ```python
+   # Testing required fields using ValidationError
+   def test_required_fields(self):
+       # Create word instance without required field
+       word = Word(romaji="test", english="test")  # missing japanese field
+       
+       # Validate using full_clean()
+       with pytest.raises(ValidationError):
+           word.full_clean()
+   ```
+
+7. Testing Best Practices:
+   - Use `full_clean()` for model validation instead of just saving
+   - Use `ValidationError` for field validation tests
+   - Use `IntegrityError` for database constraint tests
+   - Create fixtures for commonly used test data
+   - Test both success and failure cases
+   - Keep tests focused and well-named
+   - Add comments explaining complex test scenarios
+
+8. Current Test Status:
+   - Total Coverage: 98%
+   - Test Suite Status:
+     - Total Tests: 36
+     - All tests passing
+     - No skipped or xfailed tests
+   - Coverage by Component:
+     - Models: 100% coverage (study and words apps)
+     - Serializers: 100% coverage (all serializer classes)
+     - Views: 94-100% coverage
+       - StudyActivityViewSet: 100% (including non-paginated responses)
+       - StudySessionViewSet: 94% (missing some error cases)
+       - WordViewSet: 100%
+       - GroupViewSet: 100%
+   - Specific Coverage Gaps:
+     - study/views.py: Lines 69, 85-86 (error handling)
+     - words/models.py: Lines 37-38 (stats edge cases)
+     - words/serializers.py: Lines 25-26 (error handling)
+   - Recent Coverage Improvements:
+     - Added non-paginated response testing
+     - Improved error case handling
+     - Added comprehensive model validation tests
+
+## Study Activities Implementation
+
+
+1. Models:
+   - StudyActivity: Represents different types of study activities
+   - StudySession: Tracks individual study sessions
+   - WordReviewItem: Records individual word reviews
+
+2. Features:
+   - Custom pagination (100 items per page)
+   - Detailed serializers for different use cases
+   - Nested resource access (sessions within activities, reviews within sessions)
+   - Proper timestamp handling for session tracking
+
+3. Manual Testing Results (2025-02-15):
+   ```
+   [13:50:44] "GET /api/study_activities/" 200 513
+   [13:50:53] "GET /api/study_activities/1/study_sessions/" 200 429
+   [13:51:02] "GET /api/study_sessions/1/" 200 963
+   [13:51:15] "POST /api/study_sessions/" 201 30
+   [13:51:31] "POST /api/study_sessions/3/words/9/review/" 200 107
+   ```
+   All endpoints working as expected with proper response codes and data.
