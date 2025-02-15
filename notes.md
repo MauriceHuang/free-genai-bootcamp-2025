@@ -351,15 +351,39 @@
    addopts = --cov=apps --cov-report=term-missing
    ``` 
 5. Common pytest decorators:
-@pytest.mark.django_db - Enables database access for tests, handles test DB setup/teardown
+
+@pytest.mark.django_db
+- Enables database access for tests, handles test DB setup/teardown
+- Use case: When testing model creation, queries, or any database operations
+- Example: Testing Word model creation and relationships with Groups
 Source: https://pytest-django.readthedocs.io/en/latest/database.html
- @pytest.fixture - Defines reusable test data/objects that can be injected into tests
-   Source: https://docs.pytest.org/en/stable/fixture.html
- @pytest.mark.parametrize - Runs same test multiple times with different parameters
-   Source: https://docs.pytest.org/en/stable/parametrize.html
- @pytest.mark.skip - Skips running this test
-   Source: https://docs.pytest.org/en/stable/skipping.html
- @pytest.mark.xfail - Marks test as expected to fail
-   Source: https://docs.pytest.org/en/stable/skipping.html#xfail-mark-test-functions-as-expected-to-fail
- @pytest.mark.timeout - Sets max time a test can run
-   Source: https://pypi.org/project/pytest-timeout/
+
+@pytest.fixture 
+- Defines reusable test data/objects that can be injected into tests
+- Use case: Creating test data that's needed across multiple tests
+- Example: Creating a test Group object that multiple Word tests can use
+Source: https://docs.pytest.org/en/stable/fixture.html
+
+@pytest.mark.parametrize
+- Runs same test multiple times with different parameters
+- Use case: Testing function behavior with multiple input variations
+- Example: Testing word validation with different invalid inputs (None, empty string, etc)
+Source: https://docs.pytest.org/en/stable/parametrize.html
+
+@pytest.mark.skip
+- Skips running this test
+- Use case: Temporarily skipping tests that are broken or in development
+- Example: Skipping a complex integration test while refactoring
+Source: https://docs.pytest.org/en/stable/skipping.html
+
+@pytest.mark.xfail
+- Marks test as expected to fail
+- Use case: Documenting known bugs or unimplemented features
+- Example: Marking a test for a planned feature that's not yet implemented
+Source: https://docs.pytest.org/en/stable/skipping.html#xfail-mark-test-functions-as-expected-to-fail
+
+@pytest.mark.timeout
+- Sets max time a test can run
+- Use case: Preventing tests from hanging or running too long
+- Example: Setting timeout for tests involving external API calls
+Source: https://pypi.org/project/pytest-timeout/
