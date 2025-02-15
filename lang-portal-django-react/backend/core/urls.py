@@ -24,4 +24,5 @@ router = routers.DefaultRouter()
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('words.urls')),
+    path('api/', include('study.urls')),
 ]

@@ -7,6 +7,71 @@ A language learning school wants to build a prototype of learning portal which w
 - Act as a Learning record store (LRS), providing correct and wrong score on practice vocabulary
 - A unified launchpad to launch different learning apps
 
+### Study Activities
+
+The portal includes various study activities that help users practice vocabulary:
+
+1. Typing Exercise
+   - A frontend-focused activity where users practice typing Japanese words
+   - Uses words from a selected group for practice
+   - Flow:
+     1. User selects a group of words to practice
+     2. Frontend displays English meaning and expects Japanese input
+     3. Each word attempt is recorded via `/api/study_sessions/:id/words/:word_id/review`
+     4. Success/failure is tracked in WordReviewItem model
+   - Backend Requirements:
+     - No special endpoints needed beyond standard group words retrieval
+     - Uses existing review tracking system
+     - Relies on standard study session creation and word review endpoints
+   
+   Example API Flow:
+   ```
+   1. Start a new study session:
+   POST /api/study_activities
+   Request:
+   {
+     "group_id": 1,
+     "study_activity_id": 1  // ID for typing exercise activity
+   }
+   Response:
+   {
+     "id": 124,  // new study session ID
+     "group_id": 1
+   }
+
+   2. Get words for the group:
+   GET /api/groups/1/words
+   Response:
+   {
+     "items": [
+       {
+         "japanese": "こんにちは",
+         "romaji": "konnichiwa",
+         "english": "hello",
+         "correct_count": 5,
+         "wrong_count": 2
+       }
+       // ... more words
+     ],
+     "pagination": {...}
+   }
+
+   3. Record each word attempt:
+   POST /api/study_sessions/124/words/1/review
+   Request:
+   {
+     "correct": true  // or false based on user's input matching
+   }
+   Response:
+   {
+     "success": true,
+     "word_id": 1,
+     "study_session_id": 124,
+     "correct": true,
+     "created_at": "2025-02-08T17:33:07-05:00"
+   }
+   ```
+
 ## Technical Requirements
 
 - The backend will be built using Python/Django

@@ -1,5 +1,6 @@
 import pytest
 from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from words.models import Word, Group
 
 # Common pytest decorators:
@@ -75,11 +76,17 @@ class TestWordModel:
         assert stats["wrong_count"] == 0
 
     def test_required_fields(self):
-        with pytest.raises(IntegrityError):
-            Word.objects.create(romaji="test", english="test")
+        # Create word instances
+        word1 = Word(romaji="test", english="test")
+        word2 = Word(japanese="テスト", english="test")
+        word3 = Word(japanese="テスト", romaji="test")
+
+        # Test each instance
+        with pytest.raises(ValidationError):
+            word1.full_clean()
         
-        with pytest.raises(IntegrityError):
-            Word.objects.create(japanese="テスト", english="test")
+        with pytest.raises(ValidationError):
+            word2.full_clean()
         
-        with pytest.raises(IntegrityError):
-            Word.objects.create(japanese="テスト", romaji="test")
+        with pytest.raises(ValidationError):
+            word3.full_clean()
