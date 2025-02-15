@@ -7,6 +7,20 @@
         }
     },
     {
+        "model": "words.group",
+        "pk": 2,
+        "fields": {
+            "name": "Common Phrases"
+        }
+    },
+    {
+        "model": "words.group",
+        "pk": 3,
+        "fields": {
+            "name": "Time Expressions"
+        }
+    },
+    {
         "model": "words.word",
         "pk": 1,
         "fields": {
@@ -15,6 +29,116 @@
             "english": "hello",
             "parts": null,
             "groups": [1]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 2,
+        "fields": {
+            "japanese": "さようなら",
+            "romaji": "sayounara",
+            "english": "goodbye",
+            "parts": null,
+            "groups": [1]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 3,
+        "fields": {
+            "japanese": "おはようございます",
+            "romaji": "ohayou gozaimasu",
+            "english": "good morning",
+            "parts": null,
+            "groups": [1]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 4,
+        "fields": {
+            "japanese": "こんばんは",
+            "romaji": "konbanwa",
+            "english": "good evening",
+            "parts": null,
+            "groups": [1]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 5,
+        "fields": {
+            "japanese": "ありがとうございます",
+            "romaji": "arigatou gozaimasu",
+            "english": "thank you",
+            "parts": null,
+            "groups": [2]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 6,
+        "fields": {
+            "japanese": "すみません",
+            "romaji": "sumimasen",
+            "english": "excuse me/I'm sorry",
+            "parts": null,
+            "groups": [2]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 7,
+        "fields": {
+            "japanese": "はい",
+            "romaji": "hai",
+            "english": "yes",
+            "parts": null,
+            "groups": [2]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 8,
+        "fields": {
+            "japanese": "いいえ",
+            "romaji": "iie",
+            "english": "no",
+            "parts": null,
+            "groups": [2]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 9,
+        "fields": {
+            "japanese": "今日",
+            "romaji": "kyou",
+            "english": "today",
+            "parts": null,
+            "groups": [3]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 10,
+        "fields": {
+            "japanese": "明日",
+            "romaji": "ashita",
+            "english": "tomorrow",
+            "parts": null,
+            "groups": [3]
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 11,
+        "fields": {
+            "japanese": "昨日",
+            "romaji": "kinou",
+            "english": "yesterday",
+            "parts": null,
+            "groups": [3]
         }
     }
 ] 

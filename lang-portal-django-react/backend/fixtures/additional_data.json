@@ -1,0 +1,13 @@
+[
+    {
+        "model": "words.word",
+        "pk": 12,
+        "fields": {
+            "japanese": "おやすみなさい",
+            "romaji": "oyasuminasai",
+            "english": "good night",
+            "parts": null,
+            "groups": [1, 2]
+        }
+    }
+] 

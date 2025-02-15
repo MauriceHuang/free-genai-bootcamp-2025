@@ -232,6 +232,51 @@
    - Useful for bulk operations
    - Be careful with relationships and constraints
 
+## Database Reset and Fixture Loading
+
+1. Clear Database (Complete Reset):
+   ```bash
+   python manage.py flush  # Removes all data but keeps structure
+   python manage.py loaddata fixtures/initial_data.json  # Reload fixtures
+   ```
+
+2. Backup Existing Data:
+   ```bash
+   python manage.py dumpdata words > backup.json  # Backup specific app
+   python manage.py dumpdata > full_backup.json   # Backup everything
+   ```
+
+3. Loaddata Behavior:
+   - Uses primary keys (PKs) from fixture files
+   - Updates existing records if PKs match
+   - Creates new records if PKs don't exist
+   - No automatic duplicate detection
+   - Safe to run multiple times (will update rather than duplicate)
+   - Many-to-Many Relationships:
+     ```json
+     {
+         "model": "words.word",
+         "pk": 12,
+         "fields": {
+             "japanese": "おやすみなさい",
+             "romaji": "oyasuminasai",
+             "english": "good night",
+             "parts": null,
+             "groups": [1, 2]  // Word belongs to multiple groups
+         }
+     }
+     ```
+     - Groups field takes an array of group IDs
+     - When loading: removes existing relationships, creates new ones
+     - Can add to multiple groups without affecting other words
+     - Order of loading doesn't matter (Django handles relationships after all models loaded)
+
+4. Best Practices:
+   - Backup data before major changes
+   - Use consistent PKs across fixture files
+   - Keep fixture files organized by category
+   - Document any dependencies between fixtures
+
 ## Next Steps
 
 1. Implement remaining models:
@@ -253,3 +298,68 @@
 - Custom pagination format implemented to match API spec
 - CORS enabled for development
 - SQLite database for development 
+
+## Testing
+
+1. Test Structure:
+   ```
+   backend/apps/words/tests/
+   ├── __init__.py
+   ├── test_models.py      # Tests for Word and Group models
+   ├── test_serializers.py # Tests for serializers
+   └── test_views.py       # Tests for API endpoints
+   ```
+
+2. Running Tests:
+   ```bash
+   # Install test dependencies
+   pip install pytest pytest-django pytest-cov
+
+   # Run all tests with coverage report
+   python -m pytest
+
+   # Run specific test file
+   python -m pytest apps/words/tests/test_models.py
+
+   # Run specific test class
+   python -m pytest apps/words/tests/test_models.py::TestWordModel
+
+   # Run specific test method
+   python -m pytest apps/words/tests/test_models.py::TestWordModel::test_word_creation
+   ```
+
+3. Test Coverage:
+   - Models:
+     - Group creation and validation
+     - Word creation and validation
+     - Word-Group relationships
+     - Stats calculation
+   - Serializers:
+     - Group serialization with word count
+     - Word serialization with groups and stats
+   - Views:
+     - List endpoints with pagination
+     - Detail endpoints with related data
+     - Custom actions (e.g., group words)
+
+4. Test Configuration:
+   ```ini
+   # pytest.ini
+   [pytest]
+   DJANGO_SETTINGS_MODULE = core.settings
+   python_files = test_*.py
+   addopts = --cov=apps --cov-report=term-missing
+   ``` 
+5. Common pytest decorators:
+@pytest.mark.django_db - Enables database access for tests, handles test DB setup/teardown
+Source: https://pytest-django.readthedocs.io/en/latest/database.html
+ @pytest.fixture - Defines reusable test data/objects that can be injected into tests
+   Source: https://docs.pytest.org/en/stable/fixture.html
+ @pytest.mark.parametrize - Runs same test multiple times with different parameters
+   Source: https://docs.pytest.org/en/stable/parametrize.html
+ @pytest.mark.skip - Skips running this test
+   Source: https://docs.pytest.org/en/stable/skipping.html
+ @pytest.mark.xfail - Marks test as expected to fail
+   Source: https://docs.pytest.org/en/stable/skipping.html#xfail-mark-test-functions-as-expected-to-fail
+ @pytest.mark.timeout - Sets max time a test can run
+   Source: https://pypi.org/project/pytest-timeout/
