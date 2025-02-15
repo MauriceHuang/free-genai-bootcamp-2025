@@ -1,0 +1,20 @@
+[
+    {
+        "model": "words.group",
+        "pk": 1,
+        "fields": {
+            "name": "Basic Greetings"
+        }
+    },
+    {
+        "model": "words.word",
+        "pk": 1,
+        "fields": {
+            "japanese": "こんにちは",
+            "romaji": "konnichiwa",
+            "english": "hello",
+            "parts": null,
+            "groups": [1]
+        }
+    }
+] 
